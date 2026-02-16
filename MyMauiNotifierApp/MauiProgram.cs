@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using MudBlazor.Services;
+using MyMauiNotifierApp.Services;
 
 namespace MyMauiNotifierApp
 {
@@ -15,13 +17,19 @@ namespace MyMauiNotifierApp
                 });
 
             builder.Services.AddMauiBlazorWebView();
+            builder.Services.AddSingleton<IAlertNotificationService, AlertNotificationService>();
+            builder.Services.AddSingleton<ISettingsStorage, SettingsStorage>();
+            builder.Services.AddSingleton<IScheduleMonitorService, ScheduleMonitorService>();
 
+            builder.Services.AddHttpClient<ScheduleMonitorService>();
+
+            builder.Services.AddMudServices();
 #if DEBUG
-    		builder.Services.AddBlazorWebViewDeveloperTools();
+            builder.Services.AddBlazorWebViewDeveloperTools();
     		builder.Logging.AddDebug();
 #endif
-
-            return builder.Build();
+            var app = builder.Build();
+            return app;
         }
     }
 }

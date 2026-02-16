@@ -3,9 +3,13 @@ using MyMauiNotifierApp.Models;
 
 namespace MyMauiNotifierApp.Services;
 
-public class ScheduleMonitorService(HttpClient httpClient) : IScheduleMonitorService
+public class ScheduleMonitorService : IScheduleMonitorService
 {
-    private readonly HttpClient _httpClient = httpClient;
+    public ScheduleMonitorService(IHttpClientFactory httpClientFactory)
+    {
+        _httpClient = httpClientFactory.CreateClient();
+    }
+    private readonly HttpClient _httpClient;
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _loopCts;
 
