@@ -1,5 +1,154 @@
 ﻿@page "/"
+@using MyMauiNotifierApp.Models
+@using MyMauiNotifierApp.Services
+@implements IDisposable
+@inject ISettingsStorage SettingsStorage
+@inject IScheduleMonitorService MonitorService
+@inject IAlertNotificationService AlertNotificationService
+@inject ISnackbar Snackbar
 
-<h1>Hello, world!</h1>
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" GutterBottom="true">HTTP Schedule Monitor</MudText>
 
-Welcome to your new app.
+        <MudTextField @bind-Value="Settings.EndpointUrl" Label="Endpoint URL" Lines="2" Variant="Variant.Outlined" FullWidth="true" Class="mb-2" />
+
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Label="Start date" Date="@StartDate" DateChanged="OnStartDateChanged" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Label="End date" Date="@EndDate" DateChanged="OnEndDateChanged" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTimePicker Label="Start hour" Time="@StartHour" TimeChanged="OnStartHourChanged" AmPm="false" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTimePicker Label="End hour" Time="@EndHour" TimeChanged="OnEndHourChanged" AmPm="false" />
+            </MudItem>
+        </MudGrid>
+
+        <MudNumericField T="int" Label="Interval (minutes)" @bind-Value="Settings.IntervalMinutes" Min="1" Max="1440" Variant="Variant.Outlined" Class="my-2" />
+
+        <MudSwitch @bind-Value="Settings.EnableVibrationToast" Color="Color.Primary" Label="Enable vibration + toast on availability" />
+        <MudSwitch @bind-Value="Settings.EnableTelegramNotifications" Color="Color.Primary" Label="Enable Telegram notifications" />
+
+        @if (Settings.EnableTelegramNotifications)
+        {
+            <MudTextField @bind-Value="Settings.TelegramBotToken" Label="Telegram bot token" Variant="Variant.Outlined" FullWidth="true" Class="mt-2" />
+            <MudTextField @bind-Value="Settings.TelegramChatId" Label="Telegram chat ID" Variant="Variant.Outlined" FullWidth="true" Class="mt-2" />
+        }
+
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAndStartAsync">Save & Start</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="RunCheckNowAsync">Check now</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="StopAsync">Stop</MudButton>
+        </MudStack>
+
+        <MudDivider Class="my-3" />
+
+        <MudChip T="bool" Color="@(MonitorService.IsRunning ? Color.Success : Color.Default)">
+            @(MonitorService.IsRunning ? "Monitor running" : "Monitor stopped")
+        </MudChip>
+
+        @if (LastResult is not null)
+        {
+            <MudAlert Severity="@(LastResult.HasAvailability ? Severity.Success : Severity.Info)" Class="mt-3">
+                <MudText Typo="Typo.subtitle2">@LastResult.Message</MudText>
+                <MudText Typo="Typo.caption">Checked (UTC): @LastResult.CheckedAtUtc.ToString("u")</MudText>
+                @if (!string.IsNullOrWhiteSpace(LastResult.ResponsePreview))
+                {
+                    <MudText Typo="Typo.caption">Preview: @LastResult.ResponsePreview</MudText>
+                }
+            </MudAlert>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private ScheduleSettings Settings { get; set; } = new();
+    private MonitorResult? LastResult { get; set; }
+
+    private DateTime? StartDate => Settings.StartDate.ToDateTime(TimeOnly.MinValue);
+    private DateTime? EndDate => Settings.EndDate.ToDateTime(TimeOnly.MinValue);
+    private TimeSpan? StartHour => Settings.StartHour.ToTimeSpan();
+    private TimeSpan? EndHour => Settings.EndHour.ToTimeSpan();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = await SettingsStorage.LoadAsync();
+        MonitorService.OnResult += HandleResult;
+    }
+
+    private void OnStartDateChanged(DateTime? value)
+    {
+        if (value is not null)
+        {
+            Settings.StartDate = DateOnly.FromDateTime(value.Value);
+        }
+    }
+
+    private void OnEndDateChanged(DateTime? value)
+    {
+        if (value is not null)
+        {
+            Settings.EndDate = DateOnly.FromDateTime(value.Value);
+        }
+    }
+
+    private void OnStartHourChanged(TimeSpan? value)
+    {
+        if (value is not null)
+        {
+            Settings.StartHour = TimeOnly.FromTimeSpan(value.Value);
+        }
+    }
+
+    private void OnEndHourChanged(TimeSpan? value)
+    {
+        if (value is not null)
+        {
+            Settings.EndHour = TimeOnly.FromTimeSpan(value.Value);
+        }
+    }
+
+    private async Task SaveAndStartAsync()
+    {
+        await SettingsStorage.SaveAsync(Settings);
+        await MonitorService.StartAsync(Settings);
+        LastResult = await MonitorService.CheckOnceAsync(Settings);
+    }
+
+    private async Task RunCheckNowAsync()
+    {
+        LastResult = await MonitorService.CheckOnceAsync(Settings);
+    }
+
+    private async Task StopAsync()
+    {
+        await MonitorService.StopAsync();
+    }
+
+    private void HandleResult(MonitorResult result)
+    {
+        LastResult = result;
+        _ = NotifyUserAsync(result);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task NotifyUserAsync(MonitorResult result)
+    {
+        if (!result.HasAvailability)
+        {
+            return;
+        }
+
+        Snackbar.Add("Availability found!", Severity.Success);
+        await AlertNotificationService.NotifyAvailabilityAsync(result, Settings);
+    }
+
+    public void Dispose()
+    {
+        MonitorService.OnResult -= HandleResult;
+    }
+}
