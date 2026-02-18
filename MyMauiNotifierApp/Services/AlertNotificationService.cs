@@ -1,6 +1,6 @@
-using System.Net.Http.Json;
-using Microsoft.Maui.Devices;
 using MyMauiNotifierApp.Models;
+using Plugin.LocalNotification;
+using System.Net.Http.Json;
 
 namespace MyMauiNotifierApp.Services;
 
@@ -17,7 +17,7 @@ public class AlertNotificationService(HttpClient httpClient) : IAlertNotificatio
 
         if (settings.EnableVibrationToast)
         {
-            TryVibrate();
+            TryVibrateAndPushNotification();
         }
 
         if (settings.EnableTelegramNotifications)
@@ -26,11 +26,16 @@ public class AlertNotificationService(HttpClient httpClient) : IAlertNotificatio
         }
     }
 
-    private static void TryVibrate()
+    private async void TryVibrateAndPushNotification()
     {
         try
         {
-            Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(500));
+            Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(5000));
+            await ShowNotificationAsync(
+                id: 1001,
+                title: "Availability Detected",
+                description: "An availability was detected. Check your Telegram for details.",
+                scheduleSeconds: 1);
         }
         catch
         {
@@ -56,4 +61,27 @@ public class AlertNotificationService(HttpClient httpClient) : IAlertNotificatio
         var response = await _httpClient.PostAsJsonAsync(endpoint, payload, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task ShowNotificationAsync(
+        int id,
+        string title,
+        string description,
+        int scheduleSeconds = 1,
+        string returningData = "")
+    {
+        var request = new NotificationRequest
+        {
+            NotificationId = id,
+            Title = title,
+            Description = description,
+            ReturningData = returningData,
+            Schedule = new NotificationRequestSchedule
+            {
+                NotifyTime = DateTime.Now.AddSeconds(scheduleSeconds)
+            }
+        };
+
+        await LocalNotificationCenter.Current.Show(request);
+    }
+
 }

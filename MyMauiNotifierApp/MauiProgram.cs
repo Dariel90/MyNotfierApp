@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
 using MyMauiNotifierApp.Services;
+using Plugin.LocalNotification;
 
 namespace MyMauiNotifierApp
 {
@@ -14,7 +15,8 @@ namespace MyMauiNotifierApp
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                });
+                })
+                .UseLocalNotification();   // <-- ADD THIS           
 
             builder.Services.AddMauiBlazorWebView();
             builder.Services.AddSingleton<IAlertNotificationService, AlertNotificationService>();
