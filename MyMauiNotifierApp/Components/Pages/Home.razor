@@ -55,7 +55,7 @@
         {
             <MudAlert Severity="@(LastResult.HasAvailability ? Severity.Success : Severity.Info)" Class="mt-3">
                 <MudText Typo="Typo.subtitle2">@LastResult.Message</MudText>
-                <MudText Typo="Typo.caption">Checked: @LastResult.CheckedAt.ToString("u")</MudText>
+                <MudText Typo="Typo.caption">Checked (UTC): @LastResult.CheckedAtUtc.ToString("u")</MudText>
                 @if (!string.IsNullOrWhiteSpace(LastResult.ResponsePreview))
                 {
                     <MudText Typo="Typo.caption">Preview: @LastResult.ResponsePreview</MudText>
