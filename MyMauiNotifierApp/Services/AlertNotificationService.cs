@@ -50,7 +50,7 @@ public class AlertNotificationService(HttpClient httpClient) : IAlertNotificatio
             return;
         }
 
-        var message = $"Availability detected at {result.CheckedAt:u}. Preview: {result.ResponsePreview}";
+        var message = $"Availability detected at {result.CheckedAt}. Preview: {result.ResponsePreview}";
         var endpoint = $"https://api.telegram.org/bot{settings.TelegramBotToken}/sendMessage";
         var payload = new
         {
