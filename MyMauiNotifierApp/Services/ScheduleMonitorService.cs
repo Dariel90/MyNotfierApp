@@ -1,17 +1,15 @@
+using System.Text.RegularExpressions;
 using MyMauiNotifierApp.Models;
 
 namespace MyMauiNotifierApp.Services;
 
 public class ScheduleMonitorService : IScheduleMonitorService
 {
-    public ScheduleMonitorService(IHttpClientFactory httpClientFactory, IPlatformForegroundServiceController foregroundServiceController)
+    public ScheduleMonitorService(IHttpClientFactory httpClientFactory)
     {
         _httpClient = httpClientFactory.CreateClient();
-        _foregroundServiceController = foregroundServiceController;
     }
-
     private readonly HttpClient _httpClient;
-    private readonly IPlatformForegroundServiceController _foregroundServiceController;
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _loopCts;
 
@@ -22,13 +20,6 @@ public class ScheduleMonitorService : IScheduleMonitorService
     {
         await StopAsync();
 
-        if (_foregroundServiceController.IsSupported)
-        {
-            await _foregroundServiceController.StartAsync(settings, cancellationToken);
-            IsRunning = true;
-            return;
-        }
-
         _loopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _timer = new PeriodicTimer(TimeSpan.FromMinutes(Math.Max(1, settings.IntervalMinutes)));
         IsRunning = true;
@@ -38,7 +29,7 @@ public class ScheduleMonitorService : IScheduleMonitorService
             while (_timer is not null && await _timer.WaitForNextTickAsync(_loopCts.Token))
             {
                 var now = DateTime.Now;
-                if (!ScheduleMonitorEngine.WithinConfiguredWindow(now, settings))
+                if (!WithinConfiguredWindow(now, settings))
                 {
                     continue;
                 }
@@ -51,11 +42,6 @@ public class ScheduleMonitorService : IScheduleMonitorService
 
     public Task StopAsync()
     {
-        if (_foregroundServiceController.IsSupported)
-        {
-            _foregroundServiceController.Stop();
-        }
-
         _loopCts?.Cancel();
         _timer?.Dispose();
         _timer = null;
