@@ -61,7 +61,7 @@ public class ScheduleMonitorService : IScheduleMonitorService
 
             return new MonitorResult
             {
-                CheckedAtUtc = DateTime.UtcNow,
+                CheckedAt = DateTime.Now,
                 HasAvailability = hasAvailability,
                 Message = hasAvailability
                     ? "Availability detected in endpoint response."
@@ -73,7 +73,7 @@ public class ScheduleMonitorService : IScheduleMonitorService
         {
             return new MonitorResult
             {
-                CheckedAtUtc = DateTime.UtcNow,
+                CheckedAt = DateTime.Now,
                 HasAvailability = false,
                 Message = $"Error while checking schedule: {ex.Message}",
                 ResponsePreview = string.Empty
