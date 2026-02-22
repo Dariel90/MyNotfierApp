@@ -92,7 +92,7 @@ public class ScheduleMonitorForegroundService : Android.App.Service
                 UpdateNotification($"Last check: {result.CheckedAt:HH:mm:ss} – {result.Message}");
             }
         }
-        catch (System.OperationCanceledException)
+        catch (System.OperationCanceledException ex)
         {
             // Expected when the service is stopped.
         }

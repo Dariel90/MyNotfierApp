@@ -139,8 +139,6 @@
     {
         LastResult = result;
         _ = NotifyUserAsync(result);
-        // Stop it
-        foregroundServiceManager.Stop();
         InvokeAsync(StateHasChanged);
     }
 
