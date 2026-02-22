@@ -6,6 +6,7 @@
 @inject IScheduleMonitorService MonitorService
 @inject IAlertNotificationService AlertNotificationService
 @inject ISnackbar Snackbar
+@inject IForegroundServiceManager foregroundServiceManager
 
 <MudContainer MaxWidth="MaxWidth.Medium">
     <MudPaper Class="pa-4">
@@ -116,6 +117,11 @@
     {
         await SettingsStorage.SaveAsync(Settings);
         await MonitorService.StartAsync(Settings);
+        foregroundServiceManager.Start();
+        if(foregroundServiceManager.IsRunning)
+        {
+            Snackbar.Add("Monitor started in foreground service mode.", Severity.Info);
+        }
         LastResult = await MonitorService.CheckOnceAsync(Settings);
     }
 
@@ -133,6 +139,8 @@
     {
         LastResult = result;
         _ = NotifyUserAsync(result);
+        // Stop it
+        foregroundServiceManager.Stop();
         InvokeAsync(StateHasChanged);
     }
 

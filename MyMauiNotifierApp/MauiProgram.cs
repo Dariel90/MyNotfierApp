@@ -26,9 +26,12 @@ namespace MyMauiNotifierApp
             builder.Services.AddHttpClient<ScheduleMonitorService>();
 
             builder.Services.AddMudServices();
+#if ANDROID
+            builder.Services.AddSingleton<IForegroundServiceManager, ForegroundServiceManager>();
+#endif
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
-    		builder.Logging.AddDebug();
+            builder.Logging.AddDebug();
 #endif
             var app = builder.Build();
             return app;
